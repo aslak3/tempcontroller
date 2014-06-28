@@ -59,7 +59,7 @@ int main(void)
 	/* Setup SPI. */
 	SPCR = (1 << SPE)|(1 << MSTR)|(1 << CPHA)|(1 << SPR0);
 
-	PORTB = 0x04 | 0x01; /* Disable ss, turn off heater at startup! */
+	PORTB = 0x04; /* Disable ss, turn off heater at startup! */
 
 	DDRC = 0x0f; /* 4 digits are outputs. */
 	PORTC = 0x30; /* Pullup the up/down inputs. */
@@ -157,23 +157,27 @@ int main(void)
 		 * idea here was that we could have a wider then 1C window
 		 * of ok temps to avoid flicking the heater on and off but
 		 * this didn't work out so well and instead we have this
-		 * exact < > arrangement. */
-		if (temp > targettemp && heateron == 1)
+		 * exact < > arrangement. We only do this once we have
+		 * a full history of previous temps. */
+		if (readcount >= HISTORY_SIZE)
 		{
-			PORTB &= 0xfe;
-			heateron = 0;
-		}
-		
-		if (temp < targettemp && heateron == 0)
-		{
-			PORTB |= 0x01;
-			heateron = 1;
+			if (temp > targettemp && heateron == 1)
+			{
+				PORTB &= 0xfe;
+				heateron = 0;
+			}
+			
+			if (temp < targettemp && heateron == 0)
+			{
+				PORTB |= 0x01;
+				heateron = 1;
+			}
 		}
 		
 		/* If we got a dodgy value, force the heater off. */
 		if (origtemp <= 0)
 		{
-			PORTB |= 0x01;
+			PORTB &= 0xfe;
 			heateron = 0;
 		}
 		
