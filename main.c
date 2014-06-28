@@ -2,7 +2,7 @@
  *
  * For the ATMEGA8 and perhaps others.
  *
- * (c) 2013 Lawrence Manning. */
+ * (c) 2014 Lawrence Manning. */
 
 #include <stdio.h>
 #include <string.h>
@@ -48,7 +48,7 @@ int main(void)
 	UBRRL = BAUD_PRESCALE;
 	UBRRH = (BAUD_PRESCALE >> 8);
 	UCSRC = (1 << URSEL) | (3 << UCSZ0);
-	UCSRB = (1 << TXEN);   /* Turn on the transmission and reception circuitry. */
+	UCSRB = (1 << TXEN);   /* Turn on the transmission circuitry ONLY. */
 
 	TCCR1B |= (1 << WGM12); // CTC
 	TCCR1B |= ((1 << CS10) | (1 << CS11)); // Set up timer at Fcpu/64
@@ -56,12 +56,13 @@ int main(void)
 	TIMSK |= (1 << OCIE1A); // Enable CTC interrupt
 	
 	DDRB = (1 << 5) | (1 << 3) | (1 << 2) | (1 << 0);
+	/* Setup SPI. */
 	SPCR = (1 << SPE)|(1 << MSTR)|(1 << CPHA)|(1 << SPR0);
 
-	PORTB = 0x04 | 0x01; /* disable ss, turn off heater at startup! */
+	PORTB = 0x04 | 0x01; /* Disable ss, turn off heater at startup! */
 
 	DDRC = 0x0f; /* 4 digits are outputs. */
-	PORTC = 0x30; /* pullup the up/down inputs. */
+	PORTC = 0x30; /* Pullup the up/down inputs. */
 	DDRD = 0xfd; /* 7 segments are outputs, leaving TxD for serial on PD1. */
 	
 	_delay_us(10);		/* Lets the UART fully wake up */
