@@ -19,7 +19,7 @@
 
 #define BUFFER_SIZE 256
 
-#define HISTORY_SIZE 6
+#define HISTORY_SIZE 10
 
 #define MIN_TARGET_TEMP 10
 #define MAX_TARGET_TEMP 180
@@ -75,7 +75,6 @@ int main(void)
 
 	memset(temps, 0, sizeof(int) * HISTORY_SIZE);
 
-	int temp = 0; /* Current temp. */
 	int targettemp = 175; /* Ideal toner transfer temp. */
 	int eepromtargettemp = (int) eeprom_read_word((uint16_t *) 0);
 
@@ -90,10 +89,18 @@ int main(void)
 	int readcount = 0;
 	/* Message to scroll why the history buffer is fulled, must end in
 	 * four spaces. */
-	 char startingmessage[] = "HELLO    ";
+	char startingmessage[HISTORY_SIZE + 1];
+
+	/* Fill the message with hyphensm then add the greeting to the
+	 * start. */
+	memset(startingmessage, 0, HISTORY_SIZE + 1);
+	memset(startingmessage, '-', HISTORY_SIZE);
+	strncpy(startingmessage, "HELLO ", HISTORY_SIZE);
 
 	for (;;)
 	{
+		int temp = 0; /* Current temp. */
+
 		char serialoutput[BUFFER_SIZE];
 		unsigned char tempbuffer[2]; /* SPI goes here. */
 
@@ -124,7 +131,7 @@ int main(void)
 		/* Calculate the average temp over the interval. */
 		for (c = 0; c < HISTORY_SIZE; c++)
 			temp += temps[c];
-		temp /= HISTORY_SIZE;		
+		temp /= HISTORY_SIZE;
 
 		/* Disable interrupts because we need to update the shared
 		 * message string. */
@@ -145,29 +152,27 @@ int main(void)
 		/* Enable interrupts once more. */
 		sei();
 		
-		/* Send the current temp, target temp, and wether the heater is on
-		 * to the serial port. */
-		snprintf(serialoutput, BUFFER_SIZE - 1, "%d,%d,%d\r\n",
-			temp, targettemp, heateron);
+		/* Send the raw temp, calcualated current temp, target temp,
+		 * and wether the heater is on to the serial port. */
+		snprintf(serialoutput, BUFFER_SIZE - 1, "%d,%d,%d,%d\r\n",
+			origtemp, temp, targettemp, heateron);
 		writestring(serialoutput, 0);
 		
 		/* Now we actually figure out if we should turn the heater on
-		 * or off. If thh heater is at the target temp we will do
+		 * or off. If the heater is at the target temp we will do
 		 * nothing and leave the heater at its current state. The
-		 * idea here was that we could have a wider then 1C window
-		 * of ok temps to avoid flicking the heater on and off but
-		 * this didn't work out so well and instead we have this
-		 * exact < > arrangement. We only do this once we have
+		 * idea here is that we want to avoid flicking the heater
+		 * on and off too quickly. We only do this once we have
 		 * a full history of previous temps. */
 		if (readcount >= HISTORY_SIZE)
 		{
-			if (temp > targettemp && heateron == 1)
+			if (temp > targettemp + 1 && heateron == 1)
 			{
 				PORTB &= 0xfe;
 				heateron = 0;
 			}
 			
-			if (temp < targettemp && heateron == 0)
+			if (temp < targettemp - 1 && heateron == 0)
 			{
 				PORTB |= 0x01;
 				heateron = 1;
