@@ -136,18 +136,30 @@ int main(void)
 		/* Disable interrupts because we need to update the shared
 		 * message string. */
 		cli();
+
+		/* If we are not manipulating the target temp... */
 		if (keypresstimer == 0)
 		{
-			/* If we are not manipulating the target temp.... */
-			if (origtemp <= 0)
-				/* If we have an error show E */
-				snprintf(message, 4 + 1, "E---");
-			else if (readcount >= HISTORY_SIZE)
-				/* If we have enough data then show the temp. */
-				snprintf(message, 4 + 1, "%03dC", temp);
-			else
-				/* Otherise scroll the starting mesage across. */
+			/* If we are still starting to read data... */
+			if (readcount < HISTORY_SIZE)
+			{
+				/* Sscroll the starting mesage across. */
 				strncpy(message, startingmessage + readcount, 4);
+			}
+			else
+			{
+				/* Normal running. */
+				if (origtemp <= 0)
+				{
+					/* If we have an error show E */
+					snprintf(message, 4 + 1, "E---");
+				}
+				else
+				{
+					/* If we have enough data then show the temp. */
+					snprintf(message, 4 + 1, "%03dC", temp);
+				}
+			}
 		}
 		/* Enable interrupts once more. */
 		sei();
